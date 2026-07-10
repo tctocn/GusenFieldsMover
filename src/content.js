@@ -35,6 +35,7 @@
     const title = document.createElement('div');
     title.className = 'fm-title';
     title.textContent = 'Fields Mover';
+    title.setAttribute('title', '拖动移动面板');
 
     const toolbar = document.createElement('div');
     toolbar.className = 'fm-toolbar';
@@ -78,6 +79,76 @@
 
     panel.append(title, toolbar, filter, meta, list, status);
     document.documentElement.appendChild(panel);
+
+    function hidePanel() {
+      panel.hidden = true;
+    }
+
+    function keepPanelInViewport(left, top) {
+      const rect =
+        typeof panel.getBoundingClientRect === 'function'
+          ? panel.getBoundingClientRect()
+          : { width: panel.offsetWidth || 340, height: panel.offsetHeight || 0 };
+      const viewportWidth =
+        window.innerWidth || document.documentElement.clientWidth || rect.width;
+      const viewportHeight =
+        window.innerHeight || document.documentElement.clientHeight || rect.height;
+      const maxLeft = Math.max(0, viewportWidth - rect.width);
+      const maxTop = Math.max(0, viewportHeight - rect.height);
+
+      return {
+        left: Math.min(Math.max(0, left), maxLeft),
+        top: Math.min(Math.max(0, top), maxTop),
+      };
+    }
+
+    title.addEventListener('mousedown', (event) => {
+      if (event.button !== undefined && event.button !== 0) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const rect =
+        typeof panel.getBoundingClientRect === 'function'
+          ? panel.getBoundingClientRect()
+          : { left: 0, top: 0, width: panel.offsetWidth || 340, height: panel.offsetHeight || 0 };
+      const startX = event.clientX || 0;
+      const startY = event.clientY || 0;
+      const startLeft = rect.left || 0;
+      const startTop = rect.top || 0;
+
+      function movePanel(moveEvent) {
+        moveEvent.preventDefault();
+        const nextPosition = keepPanelInViewport(
+          startLeft + (moveEvent.clientX || 0) - startX,
+          startTop + (moveEvent.clientY || 0) - startY
+        );
+
+        panel.style.left = `${nextPosition.left}px`;
+        panel.style.top = `${nextPosition.top}px`;
+        panel.style.right = 'auto';
+      }
+
+      function stopDragging() {
+        document.removeEventListener('mousemove', movePanel);
+        document.removeEventListener('mouseup', stopDragging);
+      }
+
+      document.addEventListener('mousemove', movePanel);
+      document.addEventListener('mouseup', stopDragging);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (
+        !panel.hidden &&
+        event.target instanceof Element &&
+        !panel.contains(event.target)
+      ) {
+        hidePanel();
+      }
+    });
 
     function setStatus(message) {
       state.lastStatus = message;

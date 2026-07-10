@@ -19,6 +19,8 @@ class FakeElement {
     this.placeholder = '';
     this.autocomplete = '';
     this.checked = false;
+    this.hidden = false;
+    this.style = {};
   }
 
   setAttribute(name, value) {
@@ -47,6 +49,12 @@ class FakeElement {
   addEventListener(type, listener) {
     this.eventListeners[type] ||= [];
     this.eventListeners[type].push(listener);
+  }
+
+  removeEventListener(type, listener) {
+    this.eventListeners[type] = (this.eventListeners[type] || []).filter(
+      (currentListener) => currentListener !== listener
+    );
   }
 
   dispatchEvent(event) {
@@ -142,6 +150,8 @@ function runContentScript(document) {
       }
     },
     window: {
+      innerWidth: 1024,
+      innerHeight: 768,
       FieldsMoverCore: {
         createFieldSummary: (field, index) => ({
           index,
@@ -194,4 +204,61 @@ test('content script injects launcher into popular-func before mounting panel', 
       '粘贴到当前组件字段'
     ]
   );
+});
+
+test('panel hides when clicking outside of it', () => {
+  const document = new FakeDocument();
+  const popularFunc = document.createElement('div');
+  popularFunc.className = 'popular-func';
+  document.documentElement.appendChild(popularFunc);
+
+  runContentScript(document);
+  document.querySelector('[data-fields-mover-launcher="true"]').dispatchEvent({
+    type: 'click',
+  });
+
+  const panel = document.querySelector('#fields-mover-panel');
+  assert.equal(panel.hidden, false);
+
+  document.dispatchEvent({ type: 'click', target: popularFunc });
+
+  assert.equal(panel.hidden, true);
+});
+
+test('panel can be dragged by its title', () => {
+  const document = new FakeDocument();
+  const popularFunc = document.createElement('div');
+  popularFunc.className = 'popular-func';
+  document.documentElement.appendChild(popularFunc);
+
+  runContentScript(document);
+  document.querySelector('[data-fields-mover-launcher="true"]').dispatchEvent({
+    type: 'click',
+  });
+
+  const panel = document.querySelector('#fields-mover-panel');
+  panel.getBoundingClientRect = () => ({
+    left: 16,
+    top: 64,
+    width: 340,
+    height: 300,
+  });
+
+  const title = panel.querySelector('.fm-title');
+  title.dispatchEvent({
+    type: 'mousedown',
+    button: 0,
+    clientX: 20,
+    clientY: 70,
+  });
+  document.dispatchEvent({
+    type: 'mousemove',
+    clientX: 120,
+    clientY: 170,
+  });
+  document.dispatchEvent({ type: 'mouseup' });
+
+  assert.equal(panel.style.left, '116px');
+  assert.equal(panel.style.top, '164px');
+  assert.equal(panel.style.right, 'auto');
 });

@@ -45,7 +45,7 @@
 
 #fields-mover-panel .fm-toolbar {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -62,7 +62,7 @@
   border-radius: 6px;
   font: inherit;
   line-height: 1.4;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 
@@ -73,6 +73,10 @@
 
 #fields-mover-panel .fm-button:active {
   background: #e3e9ef;
+}
+
+#fields-mover-panel .fm-button[data-action="read"] {
+  grid-column: 1 / -1;
 }
 
 #fields-mover-panel .fm-filter {

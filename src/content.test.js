@@ -215,13 +215,7 @@ test('content script injects launcher into popular-func before mounting panel', 
   assert.ok(panel);
   assert.deepEqual(
     panel.querySelectorAll('button').map((button) => button.textContent),
-    [
-      '读取当前选中组件字段',
-      '选择可见字段',
-      '清空选择',
-      '复制选中字段 JSON',
-      '粘贴到当前组件字段'
-    ]
+    ['读取当前选中组件字段', '复制', '粘贴', '全选', '清空']
   );
 });
 

@@ -42,10 +42,10 @@
 
     const actions = [
       ['read', '读取当前选中组件字段'],
-      ['select-visible', '选择可见字段'],
-      ['clear-selection', '清空选择'],
-      ['copy', '复制选中字段 JSON'],
-      ['paste', '粘贴到当前组件字段'],
+      ['copy', '复制'],
+      ['paste', '粘贴'],
+      ['select-visible', '全选'],
+      ['clear-selection', '清空'],
     ];
 
     for (const [action, label] of actions) {

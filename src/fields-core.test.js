@@ -132,7 +132,7 @@ test('findFieldsContext throws when no selected shell exists', () => {
 
   assert.throws(
     () => core.findFieldsContext(rootDocument),
-    /No selected component found/
+    /未找到选中的组件，请先选择一个组件。/
   );
 });
 

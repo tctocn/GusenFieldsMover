@@ -138,7 +138,7 @@ function findFieldsContext(rootDocument) {
   const selectedShells = rootDocument.querySelectorAll(SELECTED_SHELL_SELECTOR);
 
   if (selectedShells.length === 0) {
-    throw new Error('No selected component found. Please select one component first.');
+    throw new Error('未找到选中的组件，请先选择一个组件。');
   }
 
   if (selectedShells.length > 1) {

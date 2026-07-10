@@ -1,0 +1,10 @@
+{
+  "name": "fields-mover-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Chrome extension for moving Vue fields between selected components.",
+  "scripts": {
+    "test": "node --test src/*.test.js"
+  }
+}

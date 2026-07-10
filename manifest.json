@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Fields Mover",
+  "version": "0.1.0",
+  "description": "Move selected Vue fields between page components.",
+  "content_scripts": [
+    {
+      "matches": ["http://example.internal/*"],
+      "js": [
+        "src/fields-core.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/panel.css"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}

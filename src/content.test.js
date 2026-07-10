@@ -123,6 +123,17 @@ class FakeElement {
   }
 }
 
+class FakeComment extends FakeElement {
+  constructor(textContent) {
+    super('#comment');
+    this.textContent = textContent;
+  }
+
+  matches() {
+    return false;
+  }
+}
+
 class FakeDocument extends FakeElement {
   constructor() {
     super('#document');
@@ -132,6 +143,10 @@ class FakeDocument extends FakeElement {
 
   createElement(tagName) {
     return new FakeElement(tagName);
+  }
+
+  createComment(textContent) {
+    return new FakeComment(textContent);
   }
 }
 
@@ -187,7 +202,11 @@ test('content script injects launcher into popular-func before mounting panel', 
 
   const launcher = document.querySelector('[data-fields-mover-launcher="true"]');
   assert.ok(launcher);
-  assert.equal(launcher.textContent, '复制面板');
+  assert.equal(launcher.tagName, 'A');
+  assert.equal(launcher.className, 'link el-link el-link--primary is-underline');
+  assert.equal(launcher.attributes['data-v-5d28af34'], '');
+  assert.equal(launcher.querySelector('i').className, 'iconfont icon-fuzhi1');
+  assert.equal(launcher.querySelector('.el-link--inner').textContent, '复制面板');
   assert.equal(document.querySelector('#fields-mover-panel'), null);
 
   launcher.dispatchEvent({ type: 'click' });

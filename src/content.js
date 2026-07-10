@@ -362,18 +362,28 @@
       return false;
     }
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'fields-mover-launcher';
-    button.dataset.fieldsMoverLauncher = 'true';
-    button.textContent = '复制面板';
-    button.addEventListener('click', (event) => {
+    const launcher = document.createElement('a');
+    launcher.setAttribute('data-v-5d28af34', '');
+    launcher.className = 'link el-link el-link--primary is-underline';
+    launcher.dataset.fieldsMoverLauncher = 'true';
+
+    const icon = document.createElement('i');
+    icon.className = 'iconfont icon-fuzhi1';
+
+    const label = document.createElement('span');
+    label.className = 'el-link--inner';
+    label.textContent = '复制面板';
+
+    const placeholder = document.createComment('');
+
+    launcher.append(icon, label, placeholder);
+    launcher.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       mountFieldsMoverPanel();
     });
 
-    popularFunc.appendChild(button);
+    popularFunc.appendChild(launcher);
     return true;
   }
 

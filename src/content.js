@@ -22,6 +22,7 @@
 
     const state = {
       currentFields: [],
+      currentContext: null,
       selectedIndexes: new Set(),
       copiedFields: null,
       filter: '',
@@ -32,10 +33,23 @@
     panel.id = 'fields-mover-panel';
     panel.setAttribute('aria-label', 'Fields Mover');
 
+    const header = document.createElement('div');
+    header.className = 'fm-header';
+
     const title = document.createElement('div');
     title.className = 'fm-title';
     title.textContent = 'Fields Mover';
     title.setAttribute('title', '拖动移动面板');
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'fm-close';
+    closeButton.dataset.action = 'close';
+    closeButton.textContent = '×';
+    closeButton.setAttribute('aria-label', '关闭面板');
+    closeButton.setAttribute('title', '关闭');
+
+    header.append(title, closeButton);
 
     const toolbar = document.createElement('div');
     toolbar.className = 'fm-toolbar';
@@ -77,7 +91,7 @@
     status.dataset.role = 'status';
     status.setAttribute('role', 'status');
 
-    panel.append(title, toolbar, filter, meta, list, status);
+    panel.append(header, toolbar, filter, meta, list, status);
     document.documentElement.appendChild(panel);
 
     function hidePanel() {
@@ -221,6 +235,7 @@
 
     function readCurrentFields() {
       const context = requireCore().findFieldsContext(document);
+      state.currentContext = context;
       state.currentFields = context.fields;
       state.selectedIndexes.clear();
       setStatus(`已读取 ${state.currentFields.length} 个字段。`);
@@ -249,9 +264,14 @@
       const selectedFields = [...state.selectedIndexes]
         .sort((left, right) => left - right)
         .map((index) => state.currentFields[index]);
-      state.copiedFields = requireCore().cloneFields(selectedFields);
+      const context = state.currentContext || requireCore().findFieldsContext(document);
+      state.copiedFields = requireCore().prepareFieldsForCopy(
+        selectedFields,
+        context.vue
+      );
 
       const json = JSON.stringify(state.copiedFields, null, 2);
+      console.log(json);
       try {
         await navigator.clipboard.writeText(json);
         setStatus(`已复制 ${state.copiedFields.length} 个字段到缓存和剪贴板。`);
@@ -298,6 +318,10 @@
       }
       if (action === 'clear-selection') {
         clearSelection();
+        return;
+      }
+      if (action === 'close') {
+        hidePanel();
         return;
       }
       if (action === 'copy') {

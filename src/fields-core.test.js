@@ -232,6 +232,55 @@ test('cloneFields preserves non-JSON field members for in-memory paste', () => {
   assert.ok(Object.hasOwn(cloned[0].nested, 'visible'));
 });
 
+test('prepareFieldsForCopy resets product flags and assigns generated ids', () => {
+  let nextId = 1;
+  const vue = {
+    $gUtil: {
+      GUID() {
+        return `generated-${nextId++}`;
+      },
+    },
+  };
+  const fields = [
+    { id: 'old-1', guid: 'old-guid-1', isProduct: 1, fieldId: 'a' },
+    { id: 'old-2', guid: 'old-guid-2', isProduct: true, fieldId: 'b' },
+  ];
+
+  const copied = core.prepareFieldsForCopy(fields, vue);
+
+  assert.deepEqual(copied, [
+    { id: 'generated-1', isProduct: 0, fieldId: 'a' },
+    { id: 'generated-2', isProduct: 0, fieldId: 'b' },
+  ]);
+  assert.deepEqual(fields, [
+    { id: 'old-1', guid: 'old-guid-1', isProduct: 1, fieldId: 'a' },
+    { id: 'old-2', guid: 'old-guid-2', isProduct: true, fieldId: 'b' },
+  ]);
+});
+
+test('prepareFieldsForCopy can generate ids from root gUtil', () => {
+  const copied = core.prepareFieldsForCopy(
+    [{ id: 'old', guid: 'old-guid', isProduct: 1 }],
+    {
+      $root: {
+        $gUtil: {
+          GUID: () => 'root-guid',
+        },
+      },
+    }
+  );
+
+  assert.equal(copied[0].id, 'root-guid');
+  assert.equal(Object.hasOwn(copied[0], 'guid'), false);
+});
+
+test('prepareFieldsForCopy throws when no page GUID generator exists', () => {
+  assert.throws(
+    () => core.prepareFieldsForCopy([{ id: 'old' }], {}),
+    /未找到 this\.\$gUtil\.GUID\(\)/
+  );
+});
+
 test('createFieldSummary returns title and subtitle display text', () => {
   assert.deepEqual(core.createFieldSummary({ label: 'Amount', key: 'amount' }, 0), {
     index: 0,

@@ -213,8 +213,10 @@ test('content script injects launcher into popular-func before mounting panel', 
 
   const panel = document.querySelector('#fields-mover-panel');
   assert.ok(panel);
+  assert.equal(panel.querySelector('.fm-close').textContent, '×');
+  assert.equal(panel.querySelector('.fm-close').attributes['aria-label'], '关闭面板');
   assert.deepEqual(
-    panel.querySelectorAll('button').map((button) => button.textContent),
+    panel.querySelector('.fm-toolbar').querySelectorAll('button').map((button) => button.textContent),
     ['读取当前选中组件字段', '复制', '粘贴', '全选', '清空']
   );
 });
@@ -234,6 +236,25 @@ test('panel hides when clicking outside of it', () => {
   assert.equal(panel.hidden, false);
 
   document.dispatchEvent({ type: 'click', target: popularFunc });
+
+  assert.equal(panel.hidden, true);
+});
+
+test('panel hides when clicking the close button', () => {
+  const document = new FakeDocument();
+  const popularFunc = document.createElement('div');
+  popularFunc.className = 'popular-func';
+  document.documentElement.appendChild(popularFunc);
+
+  runContentScript(document);
+  document.querySelector('[data-fields-mover-launcher="true"]').dispatchEvent({
+    type: 'click',
+  });
+
+  const panel = document.querySelector('#fields-mover-panel');
+  assert.equal(panel.hidden, false);
+
+  panel.dispatchEvent({ type: 'click', target: panel.querySelector('.fm-close') });
 
   assert.equal(panel.hidden, true);
 });

@@ -78,6 +78,46 @@ function createFieldSummary(field, index) {
   };
 }
 
+function findGuidUtil(vue) {
+  const candidates = [
+    vue && vue.$gUtil,
+    vue && vue.$root && vue.$root.$gUtil,
+    typeof globalThis !== 'undefined' &&
+      globalThis.Vue &&
+      globalThis.Vue.prototype &&
+      globalThis.Vue.prototype.$gUtil,
+  ];
+
+  return candidates.find((candidate) => {
+    return candidate && typeof candidate.GUID === 'function';
+  }) || null;
+}
+
+function createGuid(vue) {
+  const guidUtil = findGuidUtil(vue);
+  if (!guidUtil) {
+    throw new Error('未找到 this.$gUtil.GUID()，无法生成字段 id。');
+  }
+
+  return guidUtil.GUID.call(guidUtil);
+}
+
+function prepareFieldsForCopy(fields, vue) {
+  const copiedFields = cloneFields(fields);
+
+  for (const field of copiedFields) {
+    if (!field || typeof field !== 'object') {
+      continue;
+    }
+
+    field.isProduct = 0;
+    delete field.guid;
+    field.id = createGuid(vue);
+  }
+
+  return copiedFields;
+}
+
 function getFieldsKeyFromVue(vue, expectedKey) {
   if (!vue || !expectedKey) {
     return null;
@@ -214,12 +254,14 @@ const FieldsMoverCore = {
   cloneFields,
   cloneFieldValue,
   createFieldSummary,
+  createGuid,
   findFieldsHost,
   findFieldsContext,
   getFieldsArrayFromVue,
   getFieldsKeyFromVue,
   getVueFromHost,
   planAppendFields,
+  prepareFieldsForCopy,
 };
 
 if (typeof globalThis !== 'undefined') {

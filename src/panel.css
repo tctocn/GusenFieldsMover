@@ -33,14 +33,48 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+#fields-mover-panel .fm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 #fields-mover-panel .fm-title {
   display: block;
+  min-width: 0;
+  flex: 1;
   font-size: 15px;
   font-weight: 700;
   color: #111827;
   cursor: move;
   user-select: none;
   -webkit-user-select: none;
+}
+
+#fields-mover-panel .fm-close {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: #52616f;
+  background: #ffffff;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#fields-mover-panel .fm-close:hover {
+  color: #111827;
+  background: #f1f5f8;
+  border-color: #ccd4dd;
+}
+
+#fields-mover-panel .fm-close:active {
+  background: #e3e9ef;
 }
 
 #fields-mover-panel .fm-toolbar {

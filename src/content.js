@@ -25,6 +25,7 @@
       currentContext: null,
       selectedIndexes: new Set(),
       copiedFields: null,
+      clipboardMode: false,
       filter: '',
       lastStatus: '准备就绪。',
     };
@@ -58,9 +59,25 @@
       ['read', '读取当前选中组件字段'],
       ['copy', '复制'],
       ['paste', '粘贴'],
+      ['copy-clipboard', '复制到剪贴板'],
+      ['paste-clipboard', '粘贴剪贴板'],
       ['select-visible', '全选'],
       ['clear-selection', '清空'],
     ];
+
+    const copyGroup = document.createElement('div');
+    copyGroup.className = 'fm-copy-group';
+    copyGroup.setAttribute('role', 'group');
+    copyGroup.setAttribute('aria-label', '复制与粘贴');
+    const modeLabel = document.createElement('label');
+    modeLabel.className = 'fm-mode';
+    const modeToggle = document.createElement('input');
+    modeToggle.type = 'checkbox';
+    modeToggle.dataset.role = 'clipboard-mode';
+    const modeText = document.createElement('span');
+    modeText.textContent = '剪贴板';
+    modeLabel.append(modeToggle, modeText);
+    copyGroup.appendChild(modeLabel);
 
     for (const [action, label] of actions) {
       const button = document.createElement('button');
@@ -68,7 +85,12 @@
       button.className = 'fm-button';
       button.dataset.action = action;
       button.textContent = label;
-      toolbar.appendChild(button);
+      if (['copy', 'paste', 'copy-clipboard', 'paste-clipboard'].includes(action)) {
+        copyGroup.appendChild(button);
+      } else {
+        toolbar.appendChild(button);
+        if (action === 'read') toolbar.appendChild(copyGroup);
+      }
     }
 
     const filter = document.createElement('input');
@@ -91,8 +113,49 @@
     status.dataset.role = 'status';
     status.setAttribute('role', 'status');
 
-    panel.append(header, toolbar, filter, meta, list, status);
+    const jsonEditor = document.createElement('div');
+    jsonEditor.className = 'fm-json-editor';
+    jsonEditor.dataset.role = 'json-editor';
+    jsonEditor.hidden = true;
+    const jsonLabel = document.createElement('label');
+    jsonLabel.textContent = '字段 JSON 数组';
+    jsonLabel.setAttribute('for', 'fm-json-input');
+    const jsonInput = document.createElement('textarea');
+    jsonInput.id = 'fm-json-input';
+    jsonInput.dataset.role = 'json-input';
+    jsonInput.placeholder = '在此粘贴字段 JSON 数组';
+    jsonInput.setAttribute('aria-describedby', 'fm-json-error');
+    const jsonError = document.createElement('div');
+    jsonError.id = 'fm-json-error';
+    jsonError.dataset.role = 'json-error';
+    jsonError.setAttribute('role', 'alert');
+    const jsonActions = document.createElement('div');
+    jsonActions.className = 'fm-json-actions';
+    for (const [action, label] of [['confirm-json', '确认粘贴'], ['cancel-json', '取消']]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'fm-button';
+      button.dataset.action = action;
+      button.textContent = label;
+      jsonActions.appendChild(button);
+    }
+    jsonEditor.append(jsonLabel, jsonInput, jsonError, jsonActions);
+
+    panel.append(header, toolbar, jsonEditor, filter, meta, list, status);
     document.documentElement.appendChild(panel);
+
+    function closeJsonEditor() {
+      jsonEditor.hidden = true;
+      jsonInput.value = '';
+      jsonError.textContent = '';
+    }
+
+    modeToggle.addEventListener('change', (event) => {
+      event.stopPropagation();
+      state.clipboardMode = modeToggle.checked;
+      if (!state.clipboardMode) closeJsonEditor();
+      render();
+    });
 
     function hidePanel() {
       panel.hidden = true;
@@ -190,6 +253,10 @@
     }
 
     function render() {
+      for (const action of ['copy', 'paste', 'copy-clipboard', 'paste-clipboard']) {
+        const isClipboard = action.endsWith('-clipboard');
+        copyGroup.querySelector(`[data-action="${action}"]`).hidden = isClipboard !== state.clipboardMode;
+      }
       const bufferCount = state.copiedFields ? state.copiedFields.length : 0;
       meta.textContent =
         `已读取 ${state.currentFields.length} | ` +
@@ -256,7 +323,57 @@
       render();
     }
 
-    async function copySelectedFields() {
+    async function writeClipboardText(text) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch (error) {
+          console.warn('[Fields Mover] Clipboard API 写入失败，尝试兼容复制。', error);
+        }
+      }
+
+      const activeElement = document.activeElement;
+      const inputSelection = activeElement && typeof activeElement.selectionStart === 'number'
+        ? [activeElement.selectionStart, activeElement.selectionEnd, activeElement.selectionDirection]
+        : null;
+      const selection = window.getSelection();
+      const ranges = [];
+      if (selection) {
+        for (let index = 0; index < selection.rangeCount; index += 1) {
+          ranges.push(selection.getRangeAt(index).cloneRange());
+        }
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.readOnly = true;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.documentElement.appendChild(textarea);
+      try {
+        textarea.focus({ preventScroll: true });
+        textarea.select();
+        if (!document.execCommand('copy')) {
+          throw new Error('document.execCommand(copy) 返回失败。');
+        }
+      } finally {
+        textarea.remove();
+        if (activeElement && typeof activeElement.focus === 'function') {
+          activeElement.focus({ preventScroll: true });
+          if (inputSelection) {
+            activeElement.setSelectionRange(...inputSelection);
+          }
+        }
+        if (selection) {
+          selection.removeAllRanges();
+          for (const range of ranges) selection.addRange(range);
+        }
+      }
+    }
+
+    function prepareSelectedFields() {
       if (state.selectedIndexes.size === 0) {
         throw new Error('请先选择一个或多个字段。');
       }
@@ -265,23 +382,52 @@
         .sort((left, right) => left - right)
         .map((index) => state.currentFields[index]);
       const context = state.currentContext || requireCore().findFieldsContext(document);
-      state.copiedFields = requireCore().prepareFieldsForCopy(
+      return requireCore().prepareFieldsForCopy(
         selectedFields,
         context.vue
       );
 
-      const json = JSON.stringify(state.copiedFields, null, 2);
-      console.log(json);
-      try {
-        await navigator.clipboard.writeText(json);
-        setStatus(`已复制 ${state.copiedFields.length} 个字段到缓存和剪贴板。`);
-      } catch (error) {
-        setStatus(
-          `已复制 ${state.copiedFields.length} 个字段到缓存，写入剪贴板失败。`
-        );
-      }
+    }
 
+    function copySelectedFields() {
+      state.copiedFields = prepareSelectedFields();
+      setStatus(`已复制 ${state.copiedFields.length} 个字段到当前页面缓存。`);
       render();
+    }
+
+    async function copyToClipboard() {
+      const fields = prepareSelectedFields();
+      const json = JSON.stringify(fields, null, 2);
+      try {
+        await writeClipboardText(json);
+        setStatus(`已复制 ${fields.length} 个字段到剪贴板。`);
+      } catch (error) {
+        console.warn('[Fields Mover] 写入剪贴板失败。', error);
+        setStatus('写入剪贴板失败，请重试。');
+      }
+      render();
+    }
+
+    function confirmJsonPaste() {
+      try {
+        if (!jsonInput.value.trim()) throw new Error('请输入字段 JSON 数组。');
+        let fields;
+        try {
+          fields = JSON.parse(jsonInput.value);
+        } catch (error) {
+          throw new Error('JSON 格式错误，请检查输入。');
+        }
+        if (!Array.isArray(fields) || fields.some((field) => !field || typeof field !== 'object' || Array.isArray(field))) {
+          throw new Error('请输入由字段对象组成的 JSON 数组。');
+        }
+        const context = requireCore().findFieldsContext(document);
+        const plan = requireCore().planAppendFields(context.fields, fields);
+        const prepared = requireCore().prepareFieldsForCopy(plan.toAppend, context.vue);
+        appendFields(context, { ...plan, toAppend: prepared });
+        closeJsonEditor();
+      } catch (error) {
+        jsonError.textContent = error && error.message ? error.message : String(error);
+      }
     }
 
     function pasteCopiedFields() {
@@ -293,6 +439,10 @@
       const copiedFields = requireCore().cloneFields(state.copiedFields);
       const result = requireCore().planAppendFields(context.fields, copiedFields);
 
+      appendFields(context, result);
+    }
+
+    function appendFields(context, result) {
       if (result.toAppend.length > 0) {
         context.fields.push(...result.toAppend);
       }
@@ -324,11 +474,28 @@
         hidePanel();
         return;
       }
-      if (action === 'copy') {
-        await copySelectedFields();
+      if (action === 'copy-clipboard' && state.clipboardMode) {
+        await copyToClipboard();
         return;
       }
-      if (action === 'paste') {
+      if (action === 'paste-clipboard' && state.clipboardMode) {
+        jsonEditor.hidden = false;
+        jsonInput.focus();
+        return;
+      }
+      if (action === 'confirm-json' && state.clipboardMode && !jsonEditor.hidden) {
+        confirmJsonPaste();
+        return;
+      }
+      if (action === 'cancel-json') {
+        closeJsonEditor();
+        return;
+      }
+      if (action === 'copy' && !state.clipboardMode) {
+        copySelectedFields();
+        return;
+      }
+      if (action === 'paste' && !state.clipboardMode) {
         pasteCopiedFields();
       }
     }
@@ -344,6 +511,7 @@
         return;
       }
 
+      if (button.hidden) return;
       event.preventDefault();
       runAction(button.dataset.action).catch((error) => {
         setStatus(error && error.message ? error.message : String(error));

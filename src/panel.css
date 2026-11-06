@@ -205,3 +205,76 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+
+
+#fields-mover-panel .fm-copy-group {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #d8e0e7;
+  border-radius: 6px;
+}
+
+#fields-mover-panel .fm-mode {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+#fields-mover-panel .fm-mode input {
+  all: revert;
+  margin: 0;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+#fields-mover-panel .fm-json-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  flex-shrink: 0;
+}
+
+#fields-mover-panel .fm-json-editor textarea {
+  display: block;
+  width: 100%;
+  height: 140px;
+  max-height: 24vh;
+  padding: 8px;
+  overflow: auto;
+  resize: vertical;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid #ccd4dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  font-family: monospace;
+  cursor: text;
+}
+
+#fields-mover-panel .fm-json-editor textarea:focus {
+  border-color: #4f7dbd;
+  box-shadow: 0 0 0 2px rgba(79, 125, 189, 0.18);
+}
+
+#fields-mover-panel [data-role="json-error"] {
+  color: #b42318;
+  overflow-wrap: anywhere;
+}
+
+#fields-mover-panel .fm-json-actions {
+  display: flex;
+  gap: 6px;
+}
+
+#fields-mover-panel [hidden] {
+  display: none;
+}

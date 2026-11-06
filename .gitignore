@@ -28,6 +28,7 @@ out/
 .env
 .env.*
 !.env.example
+manifest.json
 
 # Editor and IDE files
 .idea/
